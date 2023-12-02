@@ -1,9 +1,8 @@
 #include <iostream>
-#include <vector>
 using namespace std;
 
 int main() {
-    string s;
-    cout <<sizeof(s) << endl;
+    char str[] = "hello";
+    cout << sizeof(str) << endl;
     return 0;
 }

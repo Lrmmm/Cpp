@@ -1,8 +1,9 @@
 #include <iostream>
+#include <vector>
 using namespace std;
 
 int main() {
-    int a;
-    a.~int();
+    int *p;
+    *p = 1;
     return 0;
 }
