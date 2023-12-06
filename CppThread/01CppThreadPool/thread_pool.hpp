@@ -8,6 +8,8 @@
 #include <utility>
 #include <vector>
 using namespace std;
+#define MAX_THREADS 30
+
 
 // 基于Queue实现的，线程安全队列
 template<class T>
@@ -51,6 +53,7 @@ private:
     bool m_shutdown;
     SafeQueue<function<void()>> m_queue;
     vector<thread> m_threads;
+    mutex m_threads_mutex;
     mutex m_conditional_mutex;
     condition_variable m_conditional_lock;
     class ThreadWorker{
@@ -77,7 +80,7 @@ private:
         }
     };
 public:
-    ThreadPool(const int n_threads = 4):m_threads(vector<thread>(n_threads)),m_shutdown(false){}
+    ThreadPool(const int n_threads = 1):m_threads(vector<thread>(n_threads)),m_shutdown(false){}
 
     ThreadPool(const ThreadPool& ) = delete;
 
@@ -86,6 +89,18 @@ public:
     ThreadPool &operator=(const ThreadPool &) = delete;
 
     ThreadPool &operator=(ThreadPool &&) = delete;
+
+    ~ThreadPool(){
+        if(!m_shutdown){
+            m_shutdown = true;
+            m_conditional_lock.notify_all();
+            for (int i = 0; i < m_threads.size(); i++)
+            {
+                if (m_threads.at(i).joinable())
+                    m_threads.at(i).join();
+            }
+        }
+    }
 
     void init()
     {
@@ -117,7 +132,24 @@ public:
         };
         m_queue.enqueue(warpper_func);
         m_conditional_lock.notify_one();
+
+        if(getTaskCount() > 2*getThreadsCount() && getThreadsCount() < MAX_THREADS){
+            int n = min(getTaskCount()/2 + 1,MAX_THREADS);
+            for(int i = getThreadsCount(); i < n; i++)
+                m_threads.emplace_back(ThreadWorker(this,i));
+        }
+
+
         return task_ptr->get_future();
+    }
+
+    int getThreadsCount(){
+        unique_lock<mutex> lock(m_threads_mutex);
+        return m_threads.size();
+    }
+
+    int getTaskCount(){
+        return m_queue.size();
     }
 
 };
