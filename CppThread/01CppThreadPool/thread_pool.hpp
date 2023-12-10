@@ -70,7 +70,7 @@ private:
                 {
                     unique_lock<mutex> lock(m_pool->m_conditional_mutex);
                     if (m_pool->m_queue.empty())
-                        m_pool->m_conditional_lock.wait(lock);
+                        m_pool->m_conditional_lock.wait(lock);  // 调用wait会解锁lock锁住的锁
                     dequeued = m_pool->m_queue.dequeue(func);
                 }
                 if (dequeued)
